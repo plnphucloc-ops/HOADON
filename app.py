@@ -27,24 +27,51 @@ routes = {
     }
 }
 
-# ================== CHỌN TUYẾN ==================
+# ================== DANH SÁCH XE CỐ ĐỊNH ==================
+all_cars = [
+    "49B-016.93",
+    "49B-017.39",
+    "49B-019.00",
+    "49G-000.71",
+    "49B-013.18",
+    "49H-046.85"
+]
+
+# ================== LẤY ALL GIỜ ==================
+all_times = sorted(list(set(
+    time for route in routes.values() for time in route.keys()
+)))
+
+# ================== CHẾ ĐỘ ==================
+mode = st.radio("⚙️ Chế độ", ["Chuẩn (auto)", "Linh hoạt (tự chọn)"])
+
 colA, colB, colC = st.columns(3)
 
-with colA:
-    tuyen = st.selectbox("🚐 Tuyến", list(routes.keys()))
+# ================== CHUẨN ==================
+if mode == "Chuẩn (auto)":
+    with colA:
+        tuyen = st.selectbox("🚐 Tuyến", list(routes.keys()))
 
-with colB:
-    gio = st.selectbox("⏰ Giờ", list(routes[tuyen].keys()))
+    with colB:
+        gio = st.selectbox("⏰ Giờ", list(routes[tuyen].keys()))
 
-with colC:
-    xe_mac_dinh = routes[tuyen][gio]
-    ds_xe = sorted(list(set(routes[tuyen].values())))
+    with colC:
+        xe_mac_dinh = routes[tuyen][gio]
+        options = ["--- Không chọn ---"] + all_cars
+        index = options.index(xe_mac_dinh) if xe_mac_dinh in options else 0
 
-    xe = st.selectbox(
-        "🚌 Số xe",
-        ds_xe,
-        index=ds_xe.index(xe_mac_dinh)
-    )
+        xe = st.selectbox("🚌 Số xe", options, index=index)
+
+# ================== LINH HOẠT ==================
+else:
+    with colA:
+        tuyen = st.selectbox("🚐 Tuyến", list(routes.keys()))
+
+    with colB:
+        gio = st.selectbox("⏰ Giờ", all_times)
+
+    with colC:
+        xe = st.selectbox("🚌 Số xe", ["--- Không chọn ---"] + all_cars)
 
 # ================== NGÀY ==================
 ngay = st.date_input("📅 Ngày chạy")
@@ -52,7 +79,7 @@ ngay_file = ngay.strftime("%d.%m.%Y")
 ngay_show = ngay.strftime("%d/%m/%Y")
 gio_clean = gio.replace(":", "H")
 
-# ================== FORM NHẬP ==================
+# ================== FORM ==================
 st.divider()
 st.subheader("🧾 Nhập thông tin vé")
 
@@ -72,21 +99,24 @@ with st.form("form_ve"):
 
     submit = st.form_submit_button("➕ Thêm vé")
 
-# ================== LƯU DATA ==================
+# ================== DATA ==================
 if "ds_ve" not in st.session_state:
     st.session_state.ds_ve = []
 
 if submit:
-    st.session_state.ds_ve.append({
-        "ten": ten,
-        "cccd": cccd,
-        "sdt": sdt,
-        "gio": gio,
-        "tuyen": tuyen,
-        "xe": xe,
-        "so_ve": so_ve,
-        "gia": thanh_tien
-    })
+    if xe == "--- Không chọn ---":
+        st.warning("⚠️ Vui lòng chọn xe trước khi thêm vé")
+    else:
+        st.session_state.ds_ve.append({
+            "ten": ten,
+            "cccd": cccd,
+            "sdt": sdt,
+            "gio": gio,
+            "tuyen": tuyen,
+            "xe": xe,
+            "so_ve": so_ve,
+            "gia": thanh_tien
+        })
 
 # ================== HIỂN THỊ ==================
 st.divider()
@@ -112,12 +142,11 @@ if st.session_state.ds_ve:
     tong_tien = df["gia"].sum()
     st.success(f"💰 Tổng tiền: {tong_tien:,} đ")
 
-# ================== XUẤT EXCEL ==================
+# ================== XUẤT FILE ==================
 def tao_file():
     wb = Workbook()
     ws = wb.active
 
-    # HEADER
     ws.merge_cells("A1:H1")
     ws["A1"] = "CÔNG TY PHÚC HẢI ĐÀ LẠT"
     ws["A1"].font = Font(size=14, bold=True)
@@ -127,7 +156,6 @@ def tao_file():
     ws["A2"] = f"TUYẾN {tuyen} | GIỜ {gio} | XE {xe} | NGÀY {ngay_show}"
     ws["A2"].alignment = Alignment(horizontal="center")
 
-    # HEADER TABLE
     headers = [
         "Họ tên khách/Tên đơn vị",
         "CCCD/MST",
@@ -140,14 +168,6 @@ def tao_file():
     ]
 
     fill = PatternFill(start_color="DDDDDD", fill_type="solid")
-
-    for col, header in enumerate(headers, start=1):
-        cell = ws.cell(row=3, column=col, value=header)
-        cell.font = Font(bold=True)
-        cell.alignment = Alignment(horizontal="center")
-        cell.fill = fill
-
-    # BORDER
     thin = Border(
         left=Side(style='thin'),
         right=Side(style='thin'),
@@ -155,7 +175,12 @@ def tao_file():
         bottom=Side(style='thin')
     )
 
-    # DATA
+    for col, header in enumerate(headers, start=1):
+        cell = ws.cell(row=3, column=col, value=header)
+        cell.font = Font(bold=True)
+        cell.alignment = Alignment(horizontal="center")
+        cell.fill = fill
+
     for i, row in enumerate(st.session_state.ds_ve, start=4):
         ws.cell(row=i, column=1, value=row["ten"])
         ws.cell(row=i, column=2, value=row["cccd"])
@@ -165,22 +190,16 @@ def tao_file():
         ws.cell(row=i, column=6, value=row["xe"])
         ws.cell(row=i, column=7, value=row["so_ve"])
 
-        cell_money = ws.cell(row=i, column=8, value=row["gia"])
-        cell_money.number_format = '#,##0 "đ"'
+        money = ws.cell(row=i, column=8, value=row["gia"])
+        money.number_format = '#,##0 "đ"'
 
-        for col in range(1, 9):
-            ws.cell(row=i, column=col).border = thin
+        for c in range(1, 9):
+            ws.cell(row=i, column=c).border = thin
 
-    # ĐỘ RỘNG CỘT
-    widths = [30, 18, 18, 15, 15, 15, 10, 18]
-    for i, w in enumerate(widths, start=1):
-        ws.column_dimensions[chr(64+i)].width = w
-
-    # TỔNG
     last_row = len(st.session_state.ds_ve) + 4
     ws.cell(row=last_row, column=7, value="Tổng")
-    tong_cell = ws.cell(row=last_row, column=8, value=sum([x["gia"] for x in st.session_state.ds_ve]))
-    tong_cell.number_format = '#,##0 "đ"'
+    total = ws.cell(row=last_row, column=8, value=sum([x["gia"] for x in st.session_state.ds_ve]))
+    total.number_format = '#,##0 "đ"'
 
     buffer = BytesIO()
     wb.save(buffer)
@@ -192,7 +211,7 @@ if st.session_state.ds_ve:
     file_name = f"TTHD_{tuyen}_{gio_clean}_{xe}_{ngay_file}.xlsx"
 
     st.download_button(
-        "📥 Xuất file Excel",
+        "📥 Xuất Excel",
         data=tao_file(),
         file_name=file_name,
         mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
