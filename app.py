@@ -210,7 +210,7 @@ def tao_file():
 
 # ================== DOWNLOAD ==================
 if st.session_state.ds_ve:
-    file_name = f"TTHD_{tuyen}_{gio_clean}_{xe}_{ngay_file}.xlsx"
+    file_name = f"{tuyen}_{gio_clean}_{ngay_file}.xlsx"
 
     st.download_button(
         "📥 Xuất Excel",
