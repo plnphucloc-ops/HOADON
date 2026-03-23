@@ -37,7 +37,7 @@ all_cars = [
     "49H-046.85"
 ]
 
-# ================== CHỌN TUYẾN ==================
+# ================== CHỌN ==================
 colA, colB, colC = st.columns(3)
 
 with colA:
@@ -48,10 +48,8 @@ with colB:
 
 with colC:
     xe_mac_dinh = routes[tuyen][gio]
-
     options = ["--- Không chọn ---"] + all_cars
     index = options.index(xe_mac_dinh) if xe_mac_dinh in options else 0
-
     xe = st.selectbox("🚌 Số xe", options, index=index)
 
 # ================== NGÀY ==================
@@ -68,7 +66,7 @@ with st.form("form_ve"):
     col1, col2 = st.columns(2)
 
     with col1:
-        ten = st.text_input("Họ tên khách / Đơn vị")
+        ten = st.text_area("Họ tên khách / Đơn vị", height=120)
         cccd = st.text_input("CCCD / MST")
         sdt = st.text_input("Số điện thoại")
         so_ve = st.number_input("Số vé", min_value=1, value=1)
@@ -128,13 +126,17 @@ def tao_file():
     wb = Workbook()
     ws = wb.active
 
+    font_all = Font(name="Times New Roman", size=12)
+
+    # HEADER
     ws.merge_cells("A1:H1")
     ws["A1"] = "CÔNG TY PHÚC HẢI ĐÀ LẠT"
-    ws["A1"].font = Font(size=14, bold=True)
+    ws["A1"].font = Font(name="Times New Roman", size=14, bold=True)
     ws["A1"].alignment = Alignment(horizontal="center")
 
     ws.merge_cells("A2:H2")
     ws["A2"] = f"TUYẾN {tuyen} | GIỜ {gio} | XE {xe} | NGÀY {ngay_show}"
+    ws["A2"].font = font_all
     ws["A2"].alignment = Alignment(horizontal="center")
 
     headers = [
@@ -149,18 +151,19 @@ def tao_file():
     ]
 
     fill = PatternFill(start_color="DDDDDD", fill_type="solid")
+
+    for col, header in enumerate(headers, start=1):
+        cell = ws.cell(row=3, column=col, value=header)
+        cell.font = Font(name="Times New Roman", bold=True)
+        cell.alignment = Alignment(horizontal="center", vertical="center")
+        cell.fill = fill
+
     thin = Border(
         left=Side(style='thin'),
         right=Side(style='thin'),
         top=Side(style='thin'),
         bottom=Side(style='thin')
     )
-
-    for col, header in enumerate(headers, start=1):
-        cell = ws.cell(row=3, column=col, value=header)
-        cell.font = Font(bold=True)
-        cell.alignment = Alignment(horizontal="center")
-        cell.fill = fill
 
     for i, row in enumerate(st.session_state.ds_ve, start=4):
         ws.cell(row=i, column=1, value=row["ten"])
@@ -174,9 +177,27 @@ def tao_file():
         money = ws.cell(row=i, column=8, value=row["gia"])
         money.number_format = '#,##0 "đ"'
 
-        for c in range(1, 9):
-            ws.cell(row=i, column=c).border = thin
+        for col in range(1, 9):
+            cell = ws.cell(row=i, column=col)
+            cell.font = font_all
 
+            if col == 1:
+                cell.alignment = Alignment(wrap_text=True, vertical="top")
+            elif col in [2, 3]:
+                cell.alignment = Alignment(horizontal="center")
+            elif col == 8:
+                cell.alignment = Alignment(horizontal="right")
+            else:
+                cell.alignment = Alignment(horizontal="center")
+
+            cell.border = thin
+
+    # Độ rộng cột
+    widths = [35, 18, 18, 15, 15, 15, 10, 18]
+    for i, w in enumerate(widths, start=1):
+        ws.column_dimensions[chr(64+i)].width = w
+
+    # Tổng
     last_row = len(st.session_state.ds_ve) + 4
     ws.cell(row=last_row, column=7, value="Tổng")
     total = ws.cell(row=last_row, column=8, value=sum([x["gia"] for x in st.session_state.ds_ve]))
