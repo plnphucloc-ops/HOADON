@@ -1,9 +1,8 @@
 import streamlit as st
 import pandas as pd
 from openpyxl import Workbook
-from openpyxl.styles import Font, Alignment
+from openpyxl.styles import Font, Alignment, Border, Side, PatternFill
 from io import BytesIO
-from datetime import datetime
 
 st.set_page_config(layout="wide")
 st.title("🚐 PHẦN MỀM TẠO DANH SÁCH VÉ")
@@ -38,8 +37,14 @@ with colB:
     gio = st.selectbox("⏰ Giờ", list(routes[tuyen].keys()))
 
 with colC:
-    xe = routes[tuyen][gio]
-    st.text_input("🚌 Số xe", value=xe, disabled=True)
+    xe_mac_dinh = routes[tuyen][gio]
+    ds_xe = sorted(list(set(routes[tuyen].values())))
+
+    xe = st.selectbox(
+        "🚌 Số xe",
+        ds_xe,
+        index=ds_xe.index(xe_mac_dinh)
+    )
 
 # ================== NGÀY ==================
 ngay = st.date_input("📅 Ngày chạy")
@@ -122,6 +127,7 @@ def tao_file():
     ws["A2"] = f"TUYẾN {tuyen} | GIỜ {gio} | XE {xe} | NGÀY {ngay_show}"
     ws["A2"].alignment = Alignment(horizontal="center")
 
+    # HEADER TABLE
     headers = [
         "Họ tên khách/Tên đơn vị",
         "CCCD/MST",
@@ -133,8 +139,21 @@ def tao_file():
         "Thành tiền"
     ]
 
+    fill = PatternFill(start_color="DDDDDD", fill_type="solid")
+
     for col, header in enumerate(headers, start=1):
-        ws.cell(row=3, column=col, value=header)
+        cell = ws.cell(row=3, column=col, value=header)
+        cell.font = Font(bold=True)
+        cell.alignment = Alignment(horizontal="center")
+        cell.fill = fill
+
+    # BORDER
+    thin = Border(
+        left=Side(style='thin'),
+        right=Side(style='thin'),
+        top=Side(style='thin'),
+        bottom=Side(style='thin')
+    )
 
     # DATA
     for i, row in enumerate(st.session_state.ds_ve, start=4):
@@ -145,12 +164,23 @@ def tao_file():
         ws.cell(row=i, column=5, value=row["tuyen"])
         ws.cell(row=i, column=6, value=row["xe"])
         ws.cell(row=i, column=7, value=row["so_ve"])
-        ws.cell(row=i, column=8, value=row["gia"])
+
+        cell_money = ws.cell(row=i, column=8, value=row["gia"])
+        cell_money.number_format = '#,##0 "đ"'
+
+        for col in range(1, 9):
+            ws.cell(row=i, column=col).border = thin
+
+    # ĐỘ RỘNG CỘT
+    widths = [30, 18, 18, 15, 15, 15, 10, 18]
+    for i, w in enumerate(widths, start=1):
+        ws.column_dimensions[chr(64+i)].width = w
 
     # TỔNG
     last_row = len(st.session_state.ds_ve) + 4
     ws.cell(row=last_row, column=7, value="Tổng")
-    ws.cell(row=last_row, column=8, value=sum([x["gia"] for x in st.session_state.ds_ve]))
+    tong_cell = ws.cell(row=last_row, column=8, value=sum([x["gia"] for x in st.session_state.ds_ve]))
+    tong_cell.number_format = '#,##0 "đ"'
 
     buffer = BytesIO()
     wb.save(buffer)
