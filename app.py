@@ -27,7 +27,7 @@ routes = {
     }
 }
 
-# ================== DANH SÁCH XE CỐ ĐỊNH ==================
+# ================== DANH SÁCH XE ==================
 all_cars = [
     "49B-016.93",
     "49B-017.39",
@@ -37,41 +37,22 @@ all_cars = [
     "49H-046.85"
 ]
 
-# ================== LẤY ALL GIỜ ==================
-all_times = sorted(list(set(
-    time for route in routes.values() for time in route.keys()
-)))
-
-# ================== CHẾ ĐỘ ==================
-mode = st.radio("⚙️ Chế độ", ["Chuẩn (auto)", "Linh hoạt (tự chọn)"])
-
+# ================== CHỌN TUYẾN ==================
 colA, colB, colC = st.columns(3)
 
-# ================== CHUẨN ==================
-if mode == "Chuẩn (auto)":
-    with colA:
-        tuyen = st.selectbox("🚐 Tuyến", list(routes.keys()))
+with colA:
+    tuyen = st.selectbox("🚐 Tuyến", list(routes.keys()))
 
-    with colB:
-        gio = st.selectbox("⏰ Giờ", list(routes[tuyen].keys()))
+with colB:
+    gio = st.selectbox("⏰ Giờ", list(routes[tuyen].keys()))
 
-    with colC:
-        xe_mac_dinh = routes[tuyen][gio]
-        options = ["--- Không chọn ---"] + all_cars
-        index = options.index(xe_mac_dinh) if xe_mac_dinh in options else 0
+with colC:
+    xe_mac_dinh = routes[tuyen][gio]
 
-        xe = st.selectbox("🚌 Số xe", options, index=index)
+    options = ["--- Không chọn ---"] + all_cars
+    index = options.index(xe_mac_dinh) if xe_mac_dinh in options else 0
 
-# ================== LINH HOẠT ==================
-else:
-    with colA:
-        tuyen = st.selectbox("🚐 Tuyến", list(routes.keys()))
-
-    with colB:
-        gio = st.selectbox("⏰ Giờ", all_times)
-
-    with colC:
-        xe = st.selectbox("🚌 Số xe", ["--- Không chọn ---"] + all_cars)
+    xe = st.selectbox("🚌 Số xe", options, index=index)
 
 # ================== NGÀY ==================
 ngay = st.date_input("📅 Ngày chạy")
@@ -105,7 +86,7 @@ if "ds_ve" not in st.session_state:
 
 if submit:
     if xe == "--- Không chọn ---":
-        st.warning("⚠️ Vui lòng chọn xe trước khi thêm vé")
+        st.warning("⚠️ Vui lòng chọn xe")
     else:
         st.session_state.ds_ve.append({
             "ten": ten,
