@@ -5,7 +5,7 @@ from openpyxl.styles import Font, Alignment, Border, Side, PatternFill
 from io import BytesIO
 
 st.set_page_config(layout="wide")
-st.title("🚐 PHẦN MỀM TẠO DANH SÁCH VÉ")
+st.title("🚐 PHẦN MỀM TẠO FILE HÓA ĐƠN ĐIỆN TỬ")
 
 # ================== DATA TUYẾN ==================
 routes = {
