@@ -27,6 +27,14 @@ routes = {
     }
 }
 
+# ================== GIÁ THEO TUYẾN ==================
+gia_tuyen = {
+    "DL-GL": 400000,
+    "GL-DL": 400000,
+    "BMT-DL": 300000,
+    "DL-BMT": 300000
+}
+
 # ================== DANH SÁCH XE ==================
 all_cars = [
     "49B-016.93",
@@ -62,6 +70,10 @@ gio_clean = gio.replace(":", "H")
 st.divider()
 st.subheader("🧾 Nhập thông tin vé")
 
+gia_1ve = gia_tuyen[tuyen]
+
+st.info(f"💰 Giá tuyến {tuyen}: {gia_1ve:,} đ / vé")
+
 with st.form("form_ve"):
     col1, col2 = st.columns(2)
 
@@ -72,7 +84,8 @@ with st.form("form_ve"):
         so_ve = st.number_input("Số vé", min_value=1, value=1)
 
     with col2:
-        gia_1ve = st.number_input("Giá 1 vé", value=100000)
+        st.text_input("Giá 1 vé", value=f"{gia_1ve:,} đ", disabled=True)
+
         thanh_tien = so_ve * gia_1ve
         st.text_input("Thành tiền", value=f"{thanh_tien:,} đ", disabled=True)
 
@@ -128,7 +141,6 @@ def tao_file():
 
     font_all = Font(name="Times New Roman", size=12)
 
-    # HEADER
     ws.merge_cells("A1:H1")
     ws["A1"] = "CÔNG TY PHÚC HẢI ĐÀ LẠT"
     ws["A1"].font = Font(name="Times New Roman", size=14, bold=True)
@@ -192,12 +204,10 @@ def tao_file():
 
             cell.border = thin
 
-    # Độ rộng cột
     widths = [35, 18, 18, 15, 15, 15, 10, 18]
     for i, w in enumerate(widths, start=1):
         ws.column_dimensions[chr(64+i)].width = w
 
-    # Tổng
     last_row = len(st.session_state.ds_ve) + 4
     ws.cell(row=last_row, column=7, value="Tổng")
     total = ws.cell(row=last_row, column=8, value=sum([x["gia"] for x in st.session_state.ds_ve]))
