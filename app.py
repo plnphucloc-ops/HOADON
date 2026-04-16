@@ -27,15 +27,15 @@ routes = {
     }
 }
 
-# ================== GIÁ THEO TUYẾN ==================
+# ================== GIÁ ==================
 gia_tuyen = {
-    "DL-GL": 400000,
-    "GL-DL": 400000,
+    "DL-GL": 420000,
+    "GL-DL": 420000,
     "BMT-DL": 300000,
     "DL-BMT": 300000
 }
 
-# ================== DANH SÁCH XE ==================
+# ================== XE ==================
 all_cars = [
     "49B-016.93",
     "49B-017.39",
@@ -71,7 +71,6 @@ st.divider()
 st.subheader("🧾 Nhập thông tin vé")
 
 gia_1ve = gia_tuyen[tuyen]
-
 st.info(f"💰 Giá tuyến {tuyen}: {gia_1ve:,} đ / vé")
 
 with st.form("form_ve"):
@@ -85,7 +84,6 @@ with st.form("form_ve"):
 
     with col2:
         st.text_input("Giá 1 vé", value=f"{gia_1ve:,} đ", disabled=True)
-
         thanh_tien = so_ve * gia_1ve
         st.text_input("Thành tiền", value=f"{thanh_tien:,} đ", disabled=True)
 
@@ -110,29 +108,34 @@ if submit:
             "gia": thanh_tien
         })
 
-# ================== HIỂN THỊ ==================
+# ================== DANH SÁCH + XÓA ==================
 st.divider()
 st.subheader("📋 Danh sách vé")
 
 if st.session_state.ds_ve:
     df = pd.DataFrame(st.session_state.ds_ve)
 
-    df_show = df.copy()
-    df_show.columns = [
-        "Họ tên khách/Tên đơn vị",
-        "CCCD/MST",
-        "Số điện thoại",
-        "Giờ xuất bến",
-        "Tuyến xe",
-        "Số xe",
-        "Số vé",
-        "Thành tiền"
-    ]
+    for i, row in df.iterrows():
+        col1, col2 = st.columns([10, 1])
 
-    st.dataframe(df_show, use_container_width=True)
+        with col1:
+            st.write(
+                f"👤 {row['ten']} | 📞 {row['sdt']} | 🚐 {row['tuyen']} | ⏰ {row['gio']} | 🚌 {row['xe']} | 🎫 {row['so_ve']} | 💰 {row['gia']:,} đ"
+            )
 
-    tong_tien = df["gia"].sum()
-    st.success(f"💰 Tổng tiền: {tong_tien:,} đ")
+        with col2:
+            if st.button("❌", key=f"xoa_{i}"):
+                st.session_state.ds_ve.pop(i)
+                st.rerun()
+
+    # tổng tiền
+    tong = sum([x["gia"] for x in st.session_state.ds_ve])
+    st.success(f"💰 Tổng tiền: {tong:,} đ")
+
+    # xóa tất cả
+    if st.button("🗑️ Xóa tất cả"):
+        st.session_state.ds_ve = []
+        st.rerun()
 
 # ================== XUẤT FILE ==================
 def tao_file():
@@ -148,7 +151,6 @@ def tao_file():
 
     ws.merge_cells("A2:H2")
     ws["A2"] = f"TUYẾN {tuyen} | GIỜ {gio} | XE {xe} | NGÀY {ngay_show}"
-    ws["A2"].font = font_all
     ws["A2"].alignment = Alignment(horizontal="center")
 
     headers = [
@@ -167,7 +169,7 @@ def tao_file():
     for col, header in enumerate(headers, start=1):
         cell = ws.cell(row=3, column=col, value=header)
         cell.font = Font(name="Times New Roman", bold=True)
-        cell.alignment = Alignment(horizontal="center", vertical="center")
+        cell.alignment = Alignment(horizontal="center")
         cell.fill = fill
 
     thin = Border(
@@ -189,29 +191,8 @@ def tao_file():
         money = ws.cell(row=i, column=8, value=row["gia"])
         money.number_format = '#,##0 "đ"'
 
-        for col in range(1, 9):
-            cell = ws.cell(row=i, column=col)
-            cell.font = font_all
-
-            if col == 1:
-                cell.alignment = Alignment(wrap_text=True, vertical="top")
-            elif col in [2, 3]:
-                cell.alignment = Alignment(horizontal="center")
-            elif col == 8:
-                cell.alignment = Alignment(horizontal="right")
-            else:
-                cell.alignment = Alignment(horizontal="center")
-
-            cell.border = thin
-
-    widths = [35, 18, 18, 15, 15, 15, 10, 18]
-    for i, w in enumerate(widths, start=1):
-        ws.column_dimensions[chr(64+i)].width = w
-
-    last_row = len(st.session_state.ds_ve) + 4
-    ws.cell(row=last_row, column=7, value="Tổng")
-    total = ws.cell(row=last_row, column=8, value=sum([x["gia"] for x in st.session_state.ds_ve]))
-    total.number_format = '#,##0 "đ"'
+        for c in range(1, 9):
+            ws.cell(row=i, column=c).border = thin
 
     buffer = BytesIO()
     wb.save(buffer)
