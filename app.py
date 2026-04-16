@@ -101,52 +101,104 @@ def tao_file():
     wb = Workbook()
     ws = wb.active
 
-    font = Font(name="Times New Roman", size=12)
-    center = Alignment(horizontal="center", vertical="center")
-    left = Alignment(horizontal="left", vertical="top", wrap_text=True)
-    right = Alignment(horizontal="right")
+    # ===== STYLE =====
+    font_title = Font(name="Times New Roman", size=16, bold=True)
+    font_header = Font(name="Times New Roman", size=12, bold=True)
+    font_normal = Font(name="Times New Roman", size=12)
 
-    thin = Border(left=Side(style='thin'), right=Side(style='thin'),
-                  top=Side(style='thin'), bottom=Side(style='thin'))
+    center = Alignment(horizontal="center", vertical="center", wrap_text=True)
+    left = Alignment(horizontal="left", vertical="center", wrap_text=True)
+    right = Alignment(horizontal="right", vertical="center")
 
+    thin = Border(
+        left=Side(style='thin'),
+        right=Side(style='thin'),
+        top=Side(style='thin'),
+        bottom=Side(style='thin')
+    )
+
+    fill_header = PatternFill(start_color="EEEEEE", fill_type="solid")
+
+    # ===== TITLE =====
     ws.merge_cells("A1:H1")
     ws["A1"] = "CÔNG TY PHÚC HẢI ĐÀ LẠT"
+    ws["A1"].font = font_title
     ws["A1"].alignment = center
 
     ws.merge_cells("A2:H2")
-    ws["A2"] = f"{tuyen} - {gio} - {ngay_show}"
+    ws["A2"] = f"TUYẾN {tuyen} | GIỜ {gio} | XE {xe} | NGÀY {ngay_show}"
+    ws["A2"].font = font_normal
     ws["A2"].alignment = center
 
-    headers = ["Tên", "SĐT", "Giờ", "Tuyến", "Xe", "Số vé", "", "Tiền"]
+    # ===== HEADER =====
+    headers = [
+        "Họ tên khách",
+        "SĐT",
+        "Giờ",
+        "Tuyến",
+        "Xe",
+        "Số vé",
+        "",
+        "Thành tiền"
+    ]
 
-    for col, h in enumerate(headers,1):
-        c = ws.cell(row=4, column=col, value=h)
-        c.alignment = center
-        c.border = thin
+    for col, h in enumerate(headers, 1):
+        cell = ws.cell(row=4, column=col, value=h)
+        cell.font = font_header
+        cell.alignment = center
+        cell.fill = fill_header
+        cell.border = thin
 
-    for i, row in enumerate(st.session_state.ds, start=5):
+    ws.row_dimensions[4].height = 30
+
+    # ===== WIDTH =====
+    widths = [40, 18, 12, 12, 15, 10, 5, 18]
+    for i, w in enumerate(widths, 1):
+        ws.column_dimensions[chr(64+i)].width = w
+
+    # ===== DATA =====
+    start = 5
+
+    for i, row in enumerate(st.session_state.ds, start=start):
+
         ws.cell(i,1,row["ten"])
         ws.cell(i,2,row["sdt"])
         ws.cell(i,3,row["gio"])
         ws.cell(i,4,row["tuyen"])
         ws.cell(i,5,row["xe"])
         ws.cell(i,6,row["so_ve"])
-        ws.cell(i,8,row["gia"])
+
+        money = ws.cell(i,8,row["gia"])
+        money.number_format = '#,##0 "đ"'
 
         for col in range(1,9):
-            cell = ws.cell(i,col)
-            cell.border = thin
-            cell.font = font
-            if col == 1:
-                cell.alignment = left
-            elif col == 8:
-                cell.alignment = right
-            else:
-                cell.alignment = center
+            c = ws.cell(i,col)
+            c.font = font_normal
+            c.border = thin
 
-        # auto cao dòng
+            if col == 1:
+                c.alignment = left
+            elif col == 8:
+                c.alignment = right
+            else:
+                c.alignment = center
+
+        # ===== AUTO HEIGHT =====
         lines = str(row["ten"]).count("\n") + 1
-        ws.row_dimensions[i].height = max(20, lines*15)
+        ws.row_dimensions[i].height = max(28, lines * 18)
+
+    # ===== TỔNG =====
+    last = len(st.session_state.ds) + start
+
+    ws.cell(last,6,"Tổng").font = font_header
+    ws.cell(last,6).alignment = center
+
+    total = ws.cell(last,8,sum([x["gia"] for x in st.session_state.ds]))
+    total.number_format = '#,##0 "đ"'
+    total.font = font_header
+
+    for col in range(1,9):
+        ws.cell(last,col).border = thin
 
     buffer = BytesIO()
     wb.save(buffer)
