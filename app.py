@@ -5,42 +5,7 @@ from openpyxl.styles import Font, Alignment, Border, Side, PatternFill
 from io import BytesIO
 
 st.set_page_config(layout="wide")
-
-# ===== CSS =====
-st.markdown("""
-<style>
-.block-container {
-    padding-top: 1.5rem;
-}
-
-.card {
-    border: 1px solid #eee;
-    padding: 15px;
-    border-radius: 12px;
-    background: #fafafa;
-    margin-bottom: 10px;
-}
-
-.stButton > button {
-    border-radius: 10px;
-    height: 45px;
-    font-weight: 600;
-}
-
-div[data-testid="stForm"] {
-    border: 1px solid #eee;
-    padding: 20px;
-    border-radius: 12px;
-    background: #ffffff;
-}
-</style>
-""", unsafe_allow_html=True)
-
-# ===== TITLE =====
-st.markdown("""
-# 🚐 HỆ THỐNG QUẢN LÝ VÉ XE  
-### Phúc Hải Đà Lạt
-""")
+st.title("🚐 PHẦN MỀM TẠO FILE HÓA ĐƠN ĐIỆN TỬ")
 
 # ================== DATA ==================
 routes = {
@@ -63,18 +28,18 @@ all_cars = [
 ]
 
 # ================== CHỌN ==================
-col1, col2, col3 = st.columns(3)
+colA, colB, colC = st.columns(3)
 
-with col1:
+with colA:
     tuyen = st.selectbox("🚐 Tuyến", list(routes.keys()))
 
-with col2:
+with colB:
     gio = st.selectbox("⏰ Giờ", list(routes[tuyen].keys()))
 
-with col3:
+with colC:
     xe_mac_dinh = routes[tuyen][gio]
-    xe = st.selectbox("🚌 Số xe", ["--- Không chọn ---"] + all_cars,
-                      index=all_cars.index(xe_mac_dinh)+1)
+    options = ["--- Không chọn ---"] + all_cars
+    xe = st.selectbox("🚌 Số xe", options, index=options.index(xe_mac_dinh))
 
 # ================== NGÀY ==================
 ngay = st.date_input("📅 Ngày chạy")
@@ -84,41 +49,38 @@ gio_clean = gio.replace(":", "H")
 
 # ================== FORM ==================
 st.divider()
+st.subheader("🧾 Nhập thông tin vé")
 
 gia_1ve = gia_tuyen[tuyen]
+st.info(f"💰 Giá tuyến {tuyen}: {gia_1ve:,} đ / vé")
 
-st.markdown(f"""
-<div class="card">
-💰 <b>Giá vé tuyến {tuyen}</b><br>
-<h3>{gia_1ve:,} đ / vé</h3>
-</div>
-""", unsafe_allow_html=True)
+with st.form("form_ve"):
+    col1, col2 = st.columns(2)
 
-with st.form("form"):
-    colA, colB = st.columns(2)
-
-    with colA:
+    with col1:
         ten = st.text_area("Họ tên khách / Đơn vị", height=120)
+        cccd = st.text_input("CCCD / MST")
         sdt = st.text_input("Số điện thoại")
-        so_ve = st.number_input("Số vé", 1, 50, 1)
+        so_ve = st.number_input("Số vé", min_value=1, value=1)
 
-    with colB:
-        st.text_input("Giá vé", f"{gia_1ve:,} đ", disabled=True)
+    with col2:
+        st.text_input("Giá 1 vé", value=f"{gia_1ve:,} đ", disabled=True)
         thanh_tien = so_ve * gia_1ve
-        st.text_input("Thành tiền", f"{thanh_tien:,} đ", disabled=True)
+        st.text_input("Thành tiền", value=f"{thanh_tien:,} đ", disabled=True)
 
-    submit = st.form_submit_button("➕ Thêm vé", use_container_width=True)
+    submit = st.form_submit_button("➕ Thêm vé")
 
 # ================== DATA ==================
-if "ds" not in st.session_state:
-    st.session_state.ds = []
+if "ds_ve" not in st.session_state:
+    st.session_state.ds_ve = []
 
 if submit:
     if xe == "--- Không chọn ---":
-        st.warning("⚠️ Chọn xe")
+        st.warning("⚠️ Vui lòng chọn xe")
     else:
-        st.session_state.ds.append({
+        st.session_state.ds_ve.append({
             "ten": ten,
+            "cccd": cccd,
             "sdt": sdt,
             "gio": gio,
             "tuyen": tuyen,
@@ -127,37 +89,34 @@ if submit:
             "gia": thanh_tien
         })
 
-# ================== DANH SÁCH ==================
+# ================== HIỂN THỊ ==================
 st.divider()
-st.markdown("### 📋 Danh sách vé")
+st.subheader("📋 Danh sách vé")
 
-if st.session_state.ds:
+if st.session_state.ds_ve:
+    df = pd.DataFrame(st.session_state.ds_ve)
 
-    for i, row in enumerate(st.session_state.ds):
-        col1, col2 = st.columns([10,1])
-
-        with col1:
-            st.markdown(f"""
-            <div class="card">
-            👤 <b>{row['ten']}</b><br>
-            📞 {row['sdt']} | 🚐 {row['tuyen']} | ⏰ {row['gio']}<br>
-            🚌 {row['xe']} | 🎫 {row['so_ve']} vé | 💰 <b>{row['gia']:,} đ</b>
-            </div>
-            """, unsafe_allow_html=True)
-
-        with col2:
-            if st.button("❌", key=i):
-                st.session_state.ds.pop(i)
+    for i, row in df.iterrows():
+        c1, c2 = st.columns([10,1])
+        with c1:
+            st.write(f"{row['ten']} | {row['sdt']} | {row['so_ve']} vé | {row['gia']:,} đ")
+        with c2:
+            if st.button("❌", key=f"xoa_{i}"):
+                st.session_state.ds_ve.pop(i)
                 st.rerun()
 
     if st.button("🗑️ Xóa tất cả"):
-        st.session_state.ds = []
+        st.session_state.ds_ve = []
         st.rerun()
 
 # ================== XUẤT FILE ==================
 def tao_file():
     wb = Workbook()
     ws = wb.active
+
+    font_title = Font(name="Times New Roman", size=16, bold=True)
+    font_header = Font(name="Times New Roman", size=12, bold=True)
+    font_normal = Font(name="Times New Roman", size=12)
 
     center = Alignment(horizontal="center", vertical="center", wrap_text=True)
     left = Alignment(horizontal="left", vertical="center", wrap_text=True)
@@ -166,33 +125,61 @@ def tao_file():
     thin = Border(left=Side(style='thin'), right=Side(style='thin'),
                   top=Side(style='thin'), bottom=Side(style='thin'))
 
+    fill = PatternFill(start_color="EEEEEE", fill_type="solid")
+
+    # ===== TITLE =====
     ws.merge_cells("A1:H1")
     ws["A1"] = "CÔNG TY PHÚC HẢI ĐÀ LẠT"
+    ws["A1"].font = font_title
     ws["A1"].alignment = center
 
     ws.merge_cells("A2:H2")
-    ws["A2"] = f"{tuyen} - {gio} - {ngay_show}"
+    ws["A2"] = f"TUYẾN {tuyen} | GIỜ {gio} | XE {xe} | NGÀY {ngay_show}"
     ws["A2"].alignment = center
 
-    headers = ["Tên","SĐT","Giờ","Tuyến","Xe","Số vé","","Tiền"]
+    # spacing chuẩn
+    ws.row_dimensions[1].height = 32
+    ws.row_dimensions[2].height = 26
+    ws.row_dimensions[3].height = 12
 
-    for col,h in enumerate(headers,1):
-        c = ws.cell(row=4,column=col,value=h)
-        c.alignment = center
-        c.border = thin
+    headers = [
+        "Họ tên khách/Tên đơn vị","CCCD/MST","Số điện thoại",
+        "Giờ xuất bến","Tuyến xe","Số xe","Số vé","Thành tiền"
+    ]
 
-    for i,row in enumerate(st.session_state.ds,start=5):
+    for col, h in enumerate(headers, 1):
+        cell = ws.cell(row=4, column=col, value=h)
+        cell.font = font_header
+        cell.alignment = center
+        cell.fill = fill
+        cell.border = thin
+
+    ws.row_dimensions[4].height = 30
+
+    widths = [40,22,20,15,15,15,10,20]
+    for i,w in enumerate(widths,1):
+        ws.column_dimensions[chr(64+i)].width = w
+
+    start = 5
+
+    for i,row in enumerate(st.session_state.ds_ve,start=start):
+
         ws.cell(i,1,row["ten"])
-        ws.cell(i,2,row["sdt"])
-        ws.cell(i,3,row["gio"])
-        ws.cell(i,4,row["tuyen"])
-        ws.cell(i,5,row["xe"])
-        ws.cell(i,6,row["so_ve"])
-        ws.cell(i,8,row["gia"])
+        ws.cell(i,2,row["cccd"])
+        ws.cell(i,3,row["sdt"])
+        ws.cell(i,4,row["gio"])
+        ws.cell(i,5,row["tuyen"])
+        ws.cell(i,6,row["xe"])
+        ws.cell(i,7,row["so_ve"])
+
+        money = ws.cell(i,8,row["gia"])
+        money.number_format = '#,##0 [$₫-vi-VN]'
 
         for col in range(1,9):
             c = ws.cell(i,col)
+            c.font = font_normal
             c.border = thin
+
             if col == 1:
                 c.alignment = left
             elif col == 8:
@@ -200,16 +187,30 @@ def tao_file():
             else:
                 c.alignment = center
 
+        lines = str(row["ten"]).count("\n") + 1
+        ws.row_dimensions[i].height = lines * 20
+
+    last = len(st.session_state.ds_ve) + start
+
+    ws.cell(last,7,"Tổng").font = font_header
+    ws.cell(last,7).alignment = center
+
+    total = ws.cell(last,8,sum([x["gia"] for x in st.session_state.ds_ve]))
+    total.number_format = '#,##0 [$₫-vi-VN]'
+    total.font = font_header
+
+    for col in range(1,9):
+        ws.cell(last,col).border = thin
+
     buffer = BytesIO()
     wb.save(buffer)
     buffer.seek(0)
     return buffer
 
 # ================== DOWNLOAD ==================
-if st.session_state.ds:
+if st.session_state.ds_ve:
     st.download_button(
         "📥 Xuất Excel",
         data=tao_file(),
-        file_name=f"{tuyen}_{gio_clean}_{ngay_file}.xlsx",
-        use_container_width=True
+        file_name=f"{tuyen}_{gio_clean}_{ngay_file}.xlsx"
     )
