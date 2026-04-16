@@ -148,8 +148,8 @@ def tao_file():
     font_normal = Font(name="Times New Roman", size=12)
 
     center = Alignment(horizontal="center", vertical="center", wrap_text=True)
-    left = Alignment(horizontal="left", vertical="center", wrap_text=True)
-    right = Alignment(horizontal="right", vertical="center")
+left = Alignment(horizontal="left", vertical="center", wrap_text=True)
+right = Alignment(horizontal="right", vertical="center", wrap_text=True)
 
     thin = Border(
         left=Side(style='thin'),
